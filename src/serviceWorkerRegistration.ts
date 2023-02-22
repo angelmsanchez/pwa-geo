@@ -129,6 +129,10 @@ function checkValidServiceWorker(swUrl: string, config?: Config) {
     });
 }
 
+setInterval(() => {
+  postMessage("message");
+}, 1000);
+
 export function unregister() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready
