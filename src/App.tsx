@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-const intervalWorker = new Worker("./service-worker.ts");
 
 interface LocationInterace {
   longitude: number;
@@ -10,50 +9,34 @@ interface LocationInterace {
 
 function App() {
   const [locations, setLocations] = useState<LocationInterace[]>([]);
+  const worker = new Worker(new URL("./my-worker.js", import.meta.url));
 
-  intervalWorker.onmessage = () => {
-    console.log("onmessage");
-  };
-
-  const getLocation = () => {
+  const getLocation = (date: string) => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(showPosition);
+      navigator.geolocation.getCurrentPosition((position: any) => {
+        const newLocation = {
+          longitude: position.coords.longitude,
+          latitude: position.coords.latitude,
+          date,
+        };
+        setLocations((oldLocations) => [...oldLocations, newLocation]);
+      });
     } else {
       console.log("Geo Location not supported by browser");
     }
   };
 
-  const watchPosition = () => {
-    navigator.geolocation.watchPosition((position) => {
-      console.log("watchPosition ", position);
-      showPosition(position);
-    });
-  };
-
-  const showPosition = (position: any) => {
-    console.log("showPosition ", position.coords);
-    const date = new Date().toTimeString();
-    const newLocation = {
-      longitude: position.coords.longitude,
-      latitude: position.coords.latitude,
-      date,
-    };
-    setLocations((oldLocations) => [...oldLocations, newLocation]);
-  };
-
   useEffect(() => {
-    console.log("useEffect ");
-    const interval = setInterval(() => {
-      console.log("setInterval app.tsx");
-      getLocation();
-    }, 5000);
-    watchPosition();
-    return () => clearInterval(interval);
+    worker.postMessage("start");
+    worker.onmessage = function (event: any) {
+      getLocation(event.data);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="App">
+      <h6>LOCATIONS</h6>
       {locations &&
         locations.map((location, index) => {
           return (
